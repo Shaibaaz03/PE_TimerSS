@@ -93,6 +93,25 @@ const speeds = [2,4,6,8];
 let speedIndex = 0;
 let speed = speeds[speedIndex];
 
+// ---------------- TAB TITLE ----------------
+let titleInterval;
+let originalTitle = "Speed Timer";
+
+function startTitleFlicker(){
+    const titles = ["🚨 Times up", "⏰ Times UP"];
+    let i = 0;
+
+    titleInterval = setInterval(() => {
+        document.title = titles[i % 2];
+        i++;
+    }, 800);
+}
+
+function stopTitleFlicker(){
+    clearInterval(titleInterval);
+    document.title = originalTitle;
+}
+
 // ---------------- SPEED ----------------
 function toggleSpeed(){
     speedIndex = (speedIndex + 1) % speeds.length;
@@ -140,6 +159,7 @@ function sendNotification(){
 function startTimer(){
 
     clearInterval(interval);
+    stopTitleFlicker();
 
     durationSeconds = parseTime(document.getElementById("duration").value);
 
@@ -172,8 +192,13 @@ function render(){
 
     if(remaining <= 0){
         clearInterval(interval);
+
         document.getElementById("timer").textContent = "00:00:00";
+
         sendNotification();
+
+        startTitleFlicker();
+
         return;
     }
 }
