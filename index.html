@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Timer</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    background:#111;
+    color:white;
+    font-family:'Rubik', sans-serif;
+}
+
+h1{ margin-bottom:20px; }
+
+.controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+input{
+    width:220px;
+    padding:12px;
+    font-size:18px;
+    text-align:center;
+    border:none;
+    border-radius:6px;
+}
+
+button{
+    padding:12px 20px;
+    font-size:18px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    color:white;
+}
+
+#speedBtn{ background:#ff9800; }
+#startBtn{ background:#4caf50; }
+
+#timer{
+    font-size:80px;
+    margin-top:25px;
+    font-variant-numeric: tabular-nums;
+}
+
+#forwardTimer{
+    margin-top:10px;
+    opacity:0.7;
+}
+
+#endTime{
+    margin-top:10px;
+    color:#00e676;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Speed Timer</h1>
+
+<div class="controls">
+    <input id="duration" type="text" value="01:00:00">
+
+    <button id="speedBtn" onclick="toggleSpeed()">Speed: 2×</button>
+    <button id="startBtn" onclick="startTimer()">Start</button>
+</div>
+
+<div id="timer">01:00:00</div>
+<div id="forwardTimer">Elapsed: 00:00:00</div>
+<div id="endTime">End: --:--:--</div>
+
+<script>
+
+let interval;
+let startReal;
+let durationSeconds;
+
+const speeds = [2,4,6,8];
+let speedIndex = 0;
+let speed = speeds[speedIndex];
+
+// ---------------- SPEED ----------------
+function toggleSpeed(){
+    speedIndex = (speedIndex + 1) % speeds.length;
+    speed = speeds[speedIndex];
+    document.getElementById("speedBtn").textContent = "Speed: " + speed + "×";
+}
+
+// ---------------- TIME ----------------
+function parseTime(str){
+    const p = str.split(":").map(Number);
+    let h=0,m=0,s=0;
+
+    if(p.length===3)[h,m,s]=p;
+    else if(p.length===2)[m,s]=p;
+    else if(p.length===1)[s]=p;
+    else return null;
+
+    return h*3600 + m*60 + s;
+}
+
+function formatTime(t){
+    const h=Math.floor(t/3600);
+    const m=Math.floor((t%3600)/60);
+    const s=t%60;
+    return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+}
+
+// ---------------- NOTIFICATION ----------------
+const topic = "stimer01";
+
+function sendNotification(){
+    fetch("https://ntfy.sh/" + topic, {
+        method: "POST",
+        headers: {
+            "Title": "Speed Timer",
+            "Priority": "high"
+        },
+        body: "Timer finished!"
+    })
+    .then(r => console.log("ntfy status:", r.status))
+    .catch(e => console.log("ntfy error:", e));
+}
+
+// ---------------- TIMER ----------------
+function startTimer(){
+
+    clearInterval(interval);
+
+    durationSeconds = parseTime(document.getElementById("duration").value);
+
+    if(!durationSeconds){
+        alert("Invalid time format");
+        return;
+    }
+
+    startReal = Date.now();
+
+    const end = new Date(Date.now() + (durationSeconds/speed)*1000);
+    document.getElementById("endTime").textContent =
+        "End: " + end.toLocaleTimeString();
+
+    render();
+    interval = setInterval(render, 250);
+}
+
+function render(){
+
+    const now = Date.now();
+    const elapsed = (now - startReal)/1000 * speed;
+    const remaining = Math.max(0, durationSeconds - elapsed);
+
+    document.getElementById("timer").textContent =
+        formatTime(Math.floor(remaining));
+
+    document.getElementById("forwardTimer").textContent =
+        "Elapsed: " + formatTime(Math.floor(elapsed));
+
+    if(remaining <= 0){
+        clearInterval(interval);
+        document.getElementById("timer").textContent = "00:00:00";
+        sendNotification();
+        return;
+    }
+}
+
+</script>
+
+</body>
+</html>
